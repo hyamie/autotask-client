@@ -160,6 +160,7 @@ class AutotaskClient:
         entity: str,
         filters: list[dict[str, Any]],
         max_records: int | None = None,
+        max_pages: int = 200,
     ) -> list[dict[str, Any]]:
         """Query an entity with automatic pagination.
 
@@ -168,7 +169,7 @@ class AutotaskClient:
         """
         all_items: list[dict[str, Any]] = []
 
-        while True:
+        for _ in range(max_pages):
             body = {"filter": filters}
             result = await self.post(f"{entity}/query", json=body)
             items = result.get("items", [])
@@ -185,7 +186,13 @@ class AutotaskClient:
             if len(items) < _MAX_PAGE_SIZE:
                 break
 
-            last_id = items[-1]["id"]
+            last_item = items[-1]
+            last_id = last_item.get("id")
+            if last_id is None:
+                raise AutotaskAPIError(
+                    f"Entity {entity} response missing 'id' field, cannot paginate",
+                )
+
             pagination_filter = {"field": "id", "op": "gt", "value": last_id}
             filters = [f for f in filters if not (f.get("field") == "id" and f.get("op") == "gt")]
             filters.append(pagination_filter)
@@ -245,4 +252,10 @@ class AutotaskClient:
         current = resp.headers.get("X-RateLimit-Current")
         threshold = resp.headers.get("X-RateLimit-Limit")
         if current and threshold:
-            self._rate_limiter.update(int(current), int(threshold))
+            try:
+                current_int = int(current)
+                threshold_int = int(threshold)
+            except ValueError:
+                return
+            if current_int >= 0 and threshold_int > 0:
+                self._rate_limiter.update(current_int, threshold_int)

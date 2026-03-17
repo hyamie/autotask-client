@@ -1065,7 +1065,7 @@ git commit -m "feat: automatic pagination for query results"
 
 ---
 
-### Task 6: Query Filter Builder
+### Task 6: Query Filter Builder [COMPLETE]
 
 **Files:**
 - Create: `src/autotask/query.py`
