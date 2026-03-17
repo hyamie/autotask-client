@@ -138,3 +138,47 @@ async def test_generic_api_error(
         with pytest.raises(AutotaskAPIError) as exc_info:
             await client.get("Tickets")
         assert exc_info.value.status_code == 400
+
+
+# --- Pagination ---
+
+
+async def test_query_all_single_page(
+    httpx_mock: HTTPXMock, config_with_url: AutotaskConfig
+) -> None:
+    """query_all returns items when results fit in one page."""
+    httpx_mock.add_response(json={"items": [{"id": 1}, {"id": 2}]})
+
+    async with AutotaskClient(config_with_url) as client:
+        items = await client.query_all(
+            "Tickets", filters=[{"field": "status", "op": "eq", "value": 1}]
+        )
+        assert len(items) == 2
+
+
+async def test_query_all_paginates(
+    httpx_mock: HTTPXMock, config_with_url: AutotaskConfig
+) -> None:
+    """query_all auto-paginates when 500 records returned (max page size)."""
+    page1 = [{"id": i} for i in range(1, 501)]
+    page2 = [{"id": i} for i in range(501, 551)]
+
+    httpx_mock.add_response(json={"items": page1})
+    httpx_mock.add_response(json={"items": page2})
+
+    async with AutotaskClient(config_with_url) as client:
+        items = await client.query_all(
+            "Tickets", filters=[{"field": "status", "op": "eq", "value": 1}]
+        )
+        assert len(items) == 550
+
+
+async def test_query_all_empty(
+    httpx_mock: HTTPXMock, config_with_url: AutotaskConfig
+) -> None:
+    """query_all returns empty list when no results."""
+    httpx_mock.add_response(json={"items": []})
+
+    async with AutotaskClient(config_with_url) as client:
+        items = await client.query_all("Tickets", filters=[])
+        assert items == []

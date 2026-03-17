@@ -44,6 +44,7 @@ _AUTH_ERROR_PATTERNS = re.compile(
 _ALLOWED_ZONE_HOSTS = re.compile(r"^webservices\d*\.autotask\.net$")
 
 _MAX_ERROR_BODY_LEN = 500
+_MAX_PAGE_SIZE = 500
 
 
 class AutotaskClient:
@@ -153,6 +154,43 @@ class AutotaskClient:
     async def delete(self, path: str) -> dict[str, Any]:
         """Make an authenticated DELETE request."""
         return await self._request("DELETE", path)
+
+    async def query_all(
+        self,
+        entity: str,
+        filters: list[dict[str, Any]],
+        max_records: int | None = None,
+    ) -> list[dict[str, Any]]:
+        """Query an entity with automatic pagination.
+
+        Autotask returns max 500 records per query. This method automatically
+        paginates by adding an 'id > last_id' filter until all records are fetched.
+        """
+        all_items: list[dict[str, Any]] = []
+
+        while True:
+            body = {"filter": filters}
+            result = await self.post(f"{entity}/query", json=body)
+            items = result.get("items", [])
+
+            if not items:
+                break
+
+            all_items.extend(items)
+
+            if max_records and len(all_items) >= max_records:
+                all_items = all_items[:max_records]
+                break
+
+            if len(items) < _MAX_PAGE_SIZE:
+                break
+
+            last_id = items[-1]["id"]
+            pagination_filter = {"field": "id", "op": "gt", "value": last_id}
+            filters = [f for f in filters if not (f.get("field") == "id" and f.get("op") == "gt")]
+            filters.append(pagination_filter)
+
+        return all_items
 
     @retry(
         stop=stop_after_attempt(3),
