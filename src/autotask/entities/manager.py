@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 from autotask.client import AutotaskClient
+from autotask.exceptions import AutotaskNotFoundError
 from autotask.models.base import AutotaskModel, get_model_class
 from autotask.query import Q
 
@@ -41,6 +42,13 @@ class EntityManager:
         path = self._entity_path(entity_type, parent_id)
         result = await self._client.get(f"{path}/{entity_id}")
         item = result.get("item", result)
+        if item is None:
+            entity_name = (
+                entity_type._entity_type
+                if isinstance(entity_type, type) and issubclass(entity_type, AutotaskModel)
+                else str(entity_type)
+            )
+            raise AutotaskNotFoundError(f"{entity_name} {entity_id} not found")
         model_class = self._resolve_model(entity_type)
         if model_class:
             return model_class.model_validate(item)
