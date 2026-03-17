@@ -24,7 +24,7 @@ dev = [
 ]
 
 [project.scripts]
-autotask = "autotask.cli:cli"
+autotask = "autotask.cli:_safe_cli"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/autotask"]
