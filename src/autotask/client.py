@@ -126,7 +126,7 @@ class AutotaskClient:
         try:
             data = json.loads(_ZONE_CACHE_PATH.read_text())
             if data.get("username") == self._config.username:
-                return data["url"]
+                return str(data["url"])
         except (FileNotFoundError, json.JSONDecodeError, KeyError):
             pass
         return None
