@@ -1,4 +1,4 @@
-"""Task entity model (child of Project)."""
+"""Task entity model."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from autotask.models.base import AutotaskModel
 
 class Task(AutotaskModel):
     _entity_type: ClassVar[str] = "Tasks"
-    _parent_entity: ClassVar[str | None] = "Projects"
-    _parent_id_field: ClassVar[str | None] = "projectID"
+    _parent_entity: ClassVar[str | None] = None
+    _parent_id_field: ClassVar[str | None] = None
 
     projectID: int | None = None
     title: str | None = None

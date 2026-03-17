@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from autotask.entities.manager import EntityManager
-from autotask.models import Company, ProjectNote, Task, Ticket
+from autotask.models import Company, ProjectNote, Task, Ticket, TicketNote
 from autotask.query import Q
 
 
@@ -42,16 +42,16 @@ class TestGet:
     @pytest.mark.asyncio
     async def test_child_entity(self, manager, mock_client):
         mock_client.get.return_value = {
-            "item": {"id": 1, "projectID": 100, "title": "Task 1"}
+            "item": {"id": 1, "ticketID": 100, "title": "Note 1"}
         }
-        result = await manager.get(Task, 1, parent_id=100)
-        assert isinstance(result, Task)
-        mock_client.get.assert_called_once_with("Projects/100/Tasks/1")
+        result = await manager.get(TicketNote, 1, parent_id=100)
+        assert isinstance(result, TicketNote)
+        mock_client.get.assert_called_once_with("Tickets/100/TicketNotes/1")
 
     @pytest.mark.asyncio
     async def test_child_missing_parent_raises(self, manager):
         with pytest.raises(ValueError, match="parent_id is required"):
-            await manager.get(Task, 1)
+            await manager.get(TicketNote, 1)
 
     @pytest.mark.asyncio
     async def test_response_without_item_key(self, manager, mock_client):
@@ -153,14 +153,14 @@ class TestCreate:
     @pytest.mark.asyncio
     async def test_child_entity_uses_parent_from_field(self, manager, mock_client):
         mock_client.post.return_value = {
-            "item": {"id": 1, "projectID": 100, "title": "Task"}
+            "item": {"id": 1, "ticketID": 100, "title": "Note"}
         }
-        task = Task(projectID=100, title="Task", status=1, priority=2)
-        result = await manager.create(task)
-        assert isinstance(result, Task)
+        note = TicketNote(ticketID=100, title="Note", noteType=5, publish=1)
+        result = await manager.create(note)
+        assert isinstance(result, TicketNote)
         mock_client.post.assert_called_once()
         call_path = mock_client.post.call_args[0][0]
-        assert call_path == "Projects/100/Tasks"
+        assert call_path == "Tickets/100/TicketNotes"
 
     @pytest.mark.asyncio
     async def test_child_entity_explicit_parent_id(self, manager, mock_client):
@@ -190,12 +190,12 @@ class TestUpdate:
     @pytest.mark.asyncio
     async def test_update_child_entity(self, manager, mock_client):
         mock_client.patch.return_value = {
-            "item": {"id": 1, "projectID": 100, "title": "Updated"}
+            "item": {"id": 1, "ticketID": 100, "title": "Updated"}
         }
-        task = Task(id=1, projectID=100, title="Updated", status=5, priority=2)
-        await manager.update(task)
+        note = TicketNote(id=1, ticketID=100, title="Updated", noteType=5, publish=1)
+        await manager.update(note)
         call_path = mock_client.patch.call_args[0][0]
-        assert call_path == "Projects/100/Tasks"
+        assert call_path == "Tickets/100/TicketNotes"
 
 
 class TestDelete:
@@ -208,8 +208,8 @@ class TestDelete:
     @pytest.mark.asyncio
     async def test_delete_child_entity(self, manager, mock_client):
         mock_client.delete.return_value = {"itemId": 1}
-        await manager.delete(Task, 1, parent_id=100)
-        mock_client.delete.assert_called_once_with("Projects/100/Tasks/1")
+        await manager.delete(TicketNote, 1, parent_id=100)
+        mock_client.delete.assert_called_once_with("Tickets/100/TicketNotes/1")
 
 
 class TestMetadata:

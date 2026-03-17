@@ -118,6 +118,8 @@ class AutotaskClient:
                 f"Zone discovery returned unexpected URL: {parsed.netloc}",
             )
 
+        if not zone_url.endswith("/v1.0"):
+            zone_url = f"{zone_url}/v1.0"
         self._base_url = zone_url
         self._save_zone_cache(zone_url)
 

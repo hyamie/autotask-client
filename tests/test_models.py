@@ -85,8 +85,8 @@ class TestModelRegistry:
 class TestChildEntityMetadata:
     def test_task(self):
         assert Task._entity_type == "Tasks"
-        assert Task._parent_entity == "Projects"
-        assert Task._parent_id_field == "projectID"
+        assert Task._parent_entity is None
+        assert Task._parent_id_field is None
 
     def test_project_note(self):
         assert ProjectNote._entity_type == "ProjectNotes"
