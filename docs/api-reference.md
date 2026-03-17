@@ -8,7 +8,7 @@ Quick reference for Claude Code when working with the Autotask API.
 - Optional: `ImpersonationResourceId`
 - Invalid creds return HTTP **500** (not 401) — the client detects auth-related 500s
 - Zone discovery required before first call: `GET https://webservices.autotask.net/atservicesrest/v1.0/zoneInformation?user=<email>`
-- Our tenant zone: `webservices24.autotask.net`
+- Zone URL varies by tenant (e.g., `webservicesN.autotask.net`)
 
 ## Rate Limits
 

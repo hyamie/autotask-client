@@ -50,16 +50,9 @@ Use `autotask fields Tickets` to get full current list. Common queues include:
 
 ## Line of Business (LOB) Mappings
 
-| Abbreviation | LOB ID |
-|-------------|--------|
-| CIT | 17 |
-| CA | 18 |
-| GA | 19 |
-| NITH | 20 |
-
 LOB is set via `organizationalLevelAssociationID` on Projects and Tickets.
+LOB IDs are tenant-specific. Use `autotask fields Projects` and look for `organizationalLevelAssociationID` picklist values.
 
 ## Template Company IDs
 
-These are internal/template companies to exclude from customer queries:
-- 0, 264, 296
+Template companies (internal/placeholder) vary by tenant. Use `autotask companies list --all` and filter by `companyType` to identify them.
