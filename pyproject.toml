@@ -5,14 +5,35 @@ build-backend = "hatchling.build"
 [project]
 name = "autotask-client"
 version = "0.1.0"
-description = "Python client for the Autotask REST API"
+description = "Async Python client for the Autotask REST API"
+readme = "README.md"
+license = "MIT"
 requires-python = ">=3.12"
+authors = [
+    { name = "hyamie" },
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
+    "Framework :: AsyncIO",
+]
+keywords = ["autotask", "psa", "api", "async", "rest"]
 dependencies = [
     "httpx>=0.27",
     "pydantic>=2.0",
     "click>=8.0",
     "tenacity>=9.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/hyamie/autotask-client"
+Repository = "https://github.com/hyamie/autotask-client"
+Issues = "https://github.com/hyamie/autotask-client/issues"
 
 [project.optional-dependencies]
 dev = [
