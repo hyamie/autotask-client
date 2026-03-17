@@ -29,6 +29,7 @@ from autotask.exceptions import (
     AutotaskNotFoundError,
     AutotaskRateLimitError,
 )
+from autotask.rate_limiter import RateLimiter
 
 ZONE_DISCOVERY_URL = "https://webservices.autotask.net/atservicesrest/v1.0/zoneInformation"
 _ZONE_CACHE_PATH = Path.home() / ".cache" / "autotask" / "zone.json"
@@ -43,42 +44,6 @@ _AUTH_ERROR_PATTERNS = re.compile(
 _ALLOWED_ZONE_HOSTS = re.compile(r"^webservices\d*\.autotask\.net$")
 
 _MAX_ERROR_BODY_LEN = 500
-
-
-class RateLimiter:
-    """Tracks API rate limit usage and applies progressive delays.
-
-    Autotask enforces 10k requests/hour shared across ALL integrations.
-    Progressive throttling:
-    - 50% usage (5000 req) = 0.5s delay between requests
-    - 75% usage (7500 req) = 1.0s delay between requests
-    """
-
-    def __init__(self) -> None:
-        self._current: int | None = None
-        self._threshold: int | None = None
-
-    def update(self, current_count: int, threshold: int) -> None:
-        """Update rate limit state from response headers."""
-        self._current = current_count
-        self._threshold = threshold
-
-    def get_delay(self) -> float:
-        """Return the delay in seconds based on current usage."""
-        if self._current is None or self._threshold is None or self._threshold == 0:
-            return 0.0
-        ratio = self._current / self._threshold
-        if ratio >= 0.75:
-            return 1.0
-        if ratio >= 0.50:
-            return 0.5
-        return 0.0
-
-    async def wait_if_needed(self) -> None:
-        """Sleep if rate limit threshold requires it."""
-        delay = self.get_delay()
-        if delay > 0:
-            await asyncio.sleep(delay)
 
 
 class AutotaskClient:
