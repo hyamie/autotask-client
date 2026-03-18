@@ -13,6 +13,8 @@ import json
 import re
 from typing import Any
 
+from pydantic import ValidationError
+
 from fastmcp import FastMCP
 
 from autotask.client import AutotaskClient
@@ -169,8 +171,10 @@ async def autotask_create(
         instance = model_class.model_validate(fields)
         result = await em.create(instance, parent_id=parent_id)
         return json.dumps(_serialize(result), indent=2, default=str)
+    except ValidationError as e:
+        return _error(f"Field validation failed: {e.errors(include_url=False)}")
     except Exception as e:
-        return _error(str(e)) if isinstance(e, AutotaskError) else _error("Validation or internal error")
+        return _error(str(e)) if isinstance(e, AutotaskError) else _error("Internal error")
     finally:
         await client.close()
 
@@ -201,8 +205,10 @@ async def autotask_update(
         instance = model_class.model_validate(fields)
         result = await em.update(instance, parent_id=parent_id)
         return json.dumps(_serialize(result), indent=2, default=str)
+    except ValidationError as e:
+        return _error(f"Field validation failed: {e.errors(include_url=False)}")
     except Exception as e:
-        return _error(str(e)) if isinstance(e, AutotaskError) else _error("Validation or internal error")
+        return _error(str(e)) if isinstance(e, AutotaskError) else _error("Internal error")
     finally:
         await client.close()
 

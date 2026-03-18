@@ -144,14 +144,14 @@ autotask projects list --limit 10
 autotask projects get 12345
 
 # Tasks (queried via projectID filter, not a child entity)
-autotask tasks list --project-id 12345
+autotask tasks list --project 12345
 autotask tasks get 67890
 autotask tasks create --project-id 12345 --title "Migrate database"
 autotask tasks update 67890 --status 5
 
 # Time entries
 autotask time-entries list --limit 10
-autotask time-entries create --ticket-id 12345 --hours 1.5
+autotask time-entries create --resource-id 456 --ticket-id 12345 --hours 1.5
 autotask time-entries update 67890 --hours 2.0
 
 # Resources (read-only)
