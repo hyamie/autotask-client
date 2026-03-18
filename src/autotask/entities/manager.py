@@ -130,6 +130,37 @@ class EntityManager:
         path = self._entity_path(entity_type)
         return await self._client.get(f"{path}/entityInformation/fields")
 
+    async def resolve_picklist(
+        self, entity_type: type[AutotaskModel] | str, field_name: str
+    ) -> dict[int, str]:
+        """Resolve a picklist field to {id: label} mapping.
+
+        Uses the field info endpoint to find picklist values for the given field.
+        """
+        info = await self.field_info(entity_type)
+        fields = info.get("fields", [])
+        for f in fields:
+            if f.get("name") == field_name:
+                picklist_values = f.get("picklistValues", [])
+                return {
+                    int(pv["value"]): pv["label"]
+                    for pv in picklist_values
+                    if pv.get("value") is not None and pv.get("label") is not None
+                }
+        return {}
+
+    async def whoami(self) -> AutotaskModel | dict[str, Any]:
+        """Get the authenticated user's Resource record."""
+        from autotask.models.resource import Resource
+
+        username = self._client.username
+        results = await self.query(Resource, Q(email=username), max_records=1)
+        if not results:
+            raise AutotaskNotFoundError(
+                f"No resource found for authenticated user: {username}"
+            )
+        return results[0]
+
     def _entity_path(
         self,
         entity_type: type[AutotaskModel] | str,

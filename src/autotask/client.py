@@ -66,6 +66,11 @@ class AutotaskClient:
             self._base_url = f"{config.api_url.rstrip('/')}/atservicesrest/v1.0"
 
     @property
+    def username(self) -> str:
+        """The authenticated username (email)."""
+        return self._config.username
+
+    @property
     def base_url(self) -> str:
         if self._base_url is None:
             raise RuntimeError("Client not initialized. Use 'async with' or call connect().")
