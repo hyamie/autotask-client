@@ -9,7 +9,7 @@ import pytest
 from click.testing import CliRunner
 
 from autotask.cli import cli
-from autotask.models import Company, Resource, Ticket
+from autotask.models import Company, Resource, Task, TaskNote, Ticket, TicketNote
 
 
 @pytest.fixture
@@ -226,6 +226,227 @@ class TestGenericQuery:
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data[0]["name"] == "Item"
+
+
+# ── Tasks ──────────────────────────────────────────────────────
+
+
+class TestTaskCommands:
+    def test_tasks_list(
+        self, runner: CliRunner, env_vars: dict[str, str], mock_manager: AsyncMock
+    ) -> None:
+        mock_manager.query.return_value = [
+            Task(id=1, title="Do stuff", projectID=100, status=1),
+        ]
+        result = runner.invoke(cli, ["tasks", "list", "--project", "100"], env=env_vars)
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data[0]["title"] == "Do stuff"
+
+    def test_tasks_get(
+        self, runner: CliRunner, env_vars: dict[str, str], mock_manager: AsyncMock
+    ) -> None:
+        mock_manager.get.return_value = Task(id=42, title="My task", projectID=100)
+        result = runner.invoke(cli, ["tasks", "get", "42"], env=env_vars)
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["id"] == 42
+
+    def test_tasks_create(
+        self, runner: CliRunner, env_vars: dict[str, str], mock_manager: AsyncMock
+    ) -> None:
+        mock_manager.create.return_value = Task(id=99, title="New task", projectID=100, status=1)
+        result = runner.invoke(
+            cli,
+            ["tasks", "create", "--project-id", "100", "--title", "New task"],
+            env=env_vars,
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["id"] == 99
+        created = mock_manager.create.call_args[0][0]
+        assert isinstance(created, Task)
+        assert created.projectID == 100
+
+    def test_tasks_update(
+        self, runner: CliRunner, env_vars: dict[str, str], mock_manager: AsyncMock
+    ) -> None:
+        mock_manager.update.return_value = Task(id=42, title="Updated", projectID=100, status=5)
+        result = runner.invoke(
+            cli, ["tasks", "update", "42", "--status", "5"], env=env_vars
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["status"] == 5
+
+    def test_tasks_delete(
+        self, runner: CliRunner, env_vars: dict[str, str], mock_manager: AsyncMock
+    ) -> None:
+        mock_manager.delete.return_value = None
+        result = runner.invoke(cli, ["tasks", "delete", "42"], env=env_vars)
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["status"] == "deleted"
+
+
+# ── Ticket Notes ───────────────────────────────────────────────
+
+
+class TestTicketNoteCommands:
+    def test_ticket_notes_list(
+        self, runner: CliRunner, env_vars: dict[str, str], mock_manager: AsyncMock
+    ) -> None:
+        mock_manager.query.return_value = [
+            TicketNote(id=1, ticketID=100, title="Note 1"),
+        ]
+        result = runner.invoke(cli, ["ticket-notes", "list", "100"], env=env_vars)
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data[0]["title"] == "Note 1"
+
+    def test_ticket_notes_get(
+        self, runner: CliRunner, env_vars: dict[str, str], mock_manager: AsyncMock
+    ) -> None:
+        mock_manager.get.return_value = TicketNote(id=5, ticketID=100, title="Got it")
+        result = runner.invoke(cli, ["ticket-notes", "get", "100", "5"], env=env_vars)
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["id"] == 5
+
+    def test_ticket_notes_create(
+        self, runner: CliRunner, env_vars: dict[str, str], mock_manager: AsyncMock
+    ) -> None:
+        mock_manager.create.return_value = TicketNote(
+            id=10, ticketID=100, title="New note", description="Body"
+        )
+        result = runner.invoke(
+            cli,
+            ["ticket-notes", "create", "100", "--title", "New note", "--description", "Body"],
+            env=env_vars,
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["title"] == "New note"
+
+
+# ── Task Notes ─────────────────────────────────────────────────
+
+
+class TestTaskNoteCommands:
+    def test_task_notes_list(
+        self, runner: CliRunner, env_vars: dict[str, str], mock_manager: AsyncMock
+    ) -> None:
+        mock_manager.query.return_value = [
+            TaskNote(id=1, taskID=50, title="Progress"),
+        ]
+        result = runner.invoke(cli, ["task-notes", "list", "50"], env=env_vars)
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data[0]["title"] == "Progress"
+
+    def test_task_notes_create(
+        self, runner: CliRunner, env_vars: dict[str, str], mock_manager: AsyncMock
+    ) -> None:
+        mock_manager.create.return_value = TaskNote(
+            id=10, taskID=50, title="Done", description="Finished"
+        )
+        result = runner.invoke(
+            cli,
+            ["task-notes", "create", "50", "--title", "Done", "--description", "Finished"],
+            env=env_vars,
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["title"] == "Done"
+
+
+# ── Generic CRUD ───────────────────────────────────────────────
+
+
+class TestGenericCRUD:
+    def test_generic_get(
+        self, runner: CliRunner, env_vars: dict[str, str], mock_manager: AsyncMock
+    ) -> None:
+        mock_manager.get.return_value = Ticket(id=42, title="Test", status=1)
+        result = runner.invoke(cli, ["get", "Tickets", "42"], env=env_vars)
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["id"] == 42
+
+    def test_generic_create(
+        self, runner: CliRunner, env_vars: dict[str, str], mock_manager: AsyncMock
+    ) -> None:
+        mock_manager.create.return_value = Ticket(id=99, title="New", status=1)
+        result = runner.invoke(
+            cli,
+            ["create", "Tickets", "--fields", '{"title":"New","status":1,"companyID":100}'],
+            env=env_vars,
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["id"] == 99
+
+    def test_generic_update(
+        self, runner: CliRunner, env_vars: dict[str, str], mock_manager: AsyncMock
+    ) -> None:
+        mock_manager.update.return_value = Ticket(id=42, title="T", status=5)
+        result = runner.invoke(
+            cli,
+            ["update", "Tickets", "42", "--fields", '{"status":5}'],
+            env=env_vars,
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["status"] == 5
+
+    def test_generic_delete(
+        self, runner: CliRunner, env_vars: dict[str, str], mock_manager: AsyncMock
+    ) -> None:
+        mock_manager.delete.return_value = None
+        result = runner.invoke(cli, ["delete", "Tickets", "42"], env=env_vars)
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["status"] == "deleted"
+
+    def test_generic_create_unknown_entity_fails(
+        self, runner: CliRunner, env_vars: dict[str, str], mock_manager: AsyncMock
+    ) -> None:
+        result = runner.invoke(
+            cli,
+            ["create", "UnknownEntity", "--fields", '{"name":"Test"}'],
+            env=env_vars,
+        )
+        assert result.exit_code == 1
+
+
+# ── Whoami ─────────────────────────────────────────────────────
+
+
+class TestWhoamiCommand:
+    def test_whoami(
+        self, runner: CliRunner, env_vars: dict[str, str], mock_manager: AsyncMock
+    ) -> None:
+        mock_manager.whoami.return_value = Resource(
+            id=123, firstName="Test", lastName="User", email="test@example.com"
+        )
+        result = runner.invoke(cli, ["whoami"], env=env_vars)
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["firstName"] == "Test"
+
+
+# ── Picklist ───────────────────────────────────────────────────
+
+
+class TestPicklistCommand:
+    def test_picklist(
+        self, runner: CliRunner, env_vars: dict[str, str], mock_manager: AsyncMock
+    ) -> None:
+        mock_manager.resolve_picklist.return_value = {1: "New", 5: "Complete", 8: "In Progress"}
+        result = runner.invoke(cli, ["picklist", "Tickets", "status"], env=env_vars)
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["1"] == "New"
 
 
 # ── Entity info ─────────────────────────────────────────────────

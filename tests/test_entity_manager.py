@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from autotask.entities.manager import EntityManager
-from autotask.models import Company, ProjectNote, Ticket, TicketNote
+from autotask.models import Company, ProjectNote, Resource, Ticket, TicketNote
 from autotask.query import Q
 
 
@@ -232,3 +232,74 @@ class TestMetadata:
         mock_client.get.return_value = {}
         await manager.entity_info("SomeEntity")
         mock_client.get.assert_called_once_with("SomeEntity/entityInformation")
+
+
+class TestResolvePicklist:
+    @pytest.mark.asyncio
+    async def test_returns_id_label_mapping(self, manager, mock_client):
+        mock_client.get.return_value = {
+            "fields": [
+                {
+                    "name": "status",
+                    "picklistValues": [
+                        {"value": "1", "label": "New"},
+                        {"value": "5", "label": "Complete"},
+                        {"value": "8", "label": "In Progress"},
+                    ],
+                },
+                {"name": "title"},
+            ]
+        }
+        result = await manager.resolve_picklist(Ticket, "status")
+        assert result == {1: "New", 5: "Complete", 8: "In Progress"}
+
+    @pytest.mark.asyncio
+    async def test_field_not_found_returns_empty(self, manager, mock_client):
+        mock_client.get.return_value = {"fields": [{"name": "title"}]}
+        result = await manager.resolve_picklist(Ticket, "nonexistent")
+        assert result == {}
+
+    @pytest.mark.asyncio
+    async def test_field_with_no_picklist_values(self, manager, mock_client):
+        mock_client.get.return_value = {"fields": [{"name": "status"}]}
+        result = await manager.resolve_picklist(Ticket, "status")
+        assert result == {}
+
+    @pytest.mark.asyncio
+    async def test_skips_entries_with_null_value(self, manager, mock_client):
+        mock_client.get.return_value = {
+            "fields": [
+                {
+                    "name": "priority",
+                    "picklistValues": [
+                        {"value": "1", "label": "Critical"},
+                        {"value": None, "label": "Unknown"},
+                        {"value": "3", "label": "Low"},
+                    ],
+                }
+            ]
+        }
+        result = await manager.resolve_picklist(Ticket, "priority")
+        assert result == {1: "Critical", 3: "Low"}
+
+
+class TestWhoami:
+    @pytest.mark.asyncio
+    async def test_returns_resource_for_authenticated_user(self, manager, mock_client):
+        mock_client.username = "test@example.com"
+        mock_client.query_all.return_value = [
+            {"id": 123, "firstName": "Test", "lastName": "User", "email": "test@example.com"}
+        ]
+        result = await manager.whoami()
+        assert isinstance(result, Resource)
+        assert result.id == 123
+        assert result.firstName == "Test"
+
+    @pytest.mark.asyncio
+    async def test_raises_when_no_resource_found(self, manager, mock_client):
+        mock_client.username = "unknown@example.com"
+        mock_client.query_all.return_value = []
+        from autotask.exceptions import AutotaskNotFoundError
+
+        with pytest.raises(AutotaskNotFoundError, match="No resource found"):
+            await manager.whoami()
