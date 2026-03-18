@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from autotask.entities.manager import EntityManager
-from autotask.models import Company, ProjectNote, Task, Ticket, TicketNote
+from autotask.models import Company, ProjectNote, Ticket, TicketNote
 from autotask.query import Q
 
 
