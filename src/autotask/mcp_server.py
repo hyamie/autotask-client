@@ -45,7 +45,7 @@ _MAX_QUERY_LIMIT = 500
 mcp = FastMCP(
     name="autotask",
     instructions=_SERVER_INSTRUCTIONS,
-    version="0.3.0",
+    version="0.3.1",
 )
 
 
