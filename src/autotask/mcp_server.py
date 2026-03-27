@@ -45,7 +45,7 @@ _MAX_QUERY_LIMIT = 500
 mcp = FastMCP(
     name="autotask",
     instructions=_SERVER_INSTRUCTIONS,
-    version="0.3.1",
+    version="0.3.2",
 )
 
 
@@ -75,9 +75,11 @@ def _resolve_entity(entity: str) -> type[AutotaskModel] | str:
     return model if model else entity
 
 
-def _parse_filters(filters: dict[str, Any] | None) -> list[Q]:
+def _parse_filters(filters: dict[str, Any] | str) -> list[Q]:
     if not filters:
         return []
+    if isinstance(filters, str):
+        filters = json.loads(filters)
     return [Q(**{k: v}) for k, v in filters.items()]
 
 
@@ -94,7 +96,7 @@ def _serialize(data: Any) -> Any:
 @mcp.tool
 async def autotask_query(
     entity: str,
-    filters: dict[str, Any] | None = None,
+    filters: dict[str, Any] | str = {},
     limit: int = 50,
     parent_id: int | None = None,
 ) -> str:
