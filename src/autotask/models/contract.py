@@ -98,6 +98,34 @@ class ContractCharge(AutotaskModel):
     statusLastModifiedDate: datetime | None = None
 
 
+class ContractServiceAdjustment(AutotaskModel):
+    _entity_type: ClassVar[str] = "ContractServiceAdjustments"
+    _parent_entity: ClassVar[str | None] = "Contracts"
+    _parent_id_field: ClassVar[str | None] = "contractID"
+
+    contractID: int | None = None
+    contractServiceID: int | None = None
+    unitChange: int | None = None
+    adjustedUnitPrice: float | None = None
+    adjustedUnitCost: float | None = None
+    effectiveDate: datetime | None = None
+    allowRepeatServiceAdjustment: bool | None = None
+
+
+class ContractServiceBundleAdjustment(AutotaskModel):
+    _entity_type: ClassVar[str] = "ContractServiceBundleAdjustments"
+    _parent_entity: ClassVar[str | None] = "Contracts"
+    _parent_id_field: ClassVar[str | None] = "contractID"
+
+    contractID: int | None = None
+    contractServiceBundleID: int | None = None
+    unitChange: int | None = None
+    adjustedUnitPrice: float | None = None
+    adjustedUnitCost: float | None = None
+    effectiveDate: datetime | None = None
+    allowRepeatServiceAdjustment: bool | None = None
+
+
 class ContractBillingRule(AutotaskModel):
     _entity_type: ClassVar[str] = "ContractBillingRules"
 

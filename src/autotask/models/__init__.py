@@ -8,7 +8,9 @@ from autotask.models.contract import (
     ContractBillingRule,
     ContractCharge,
     ContractService,
+    ContractServiceAdjustment,
     ContractServiceBundle,
+    ContractServiceBundleAdjustment,
 )
 from autotask.models.note import ProjectNote, TaskNote, TicketNote
 from autotask.models.project import Project
@@ -26,7 +28,9 @@ __all__ = [
     "ContractBillingRule",
     "ContractCharge",
     "ContractService",
+    "ContractServiceAdjustment",
     "ContractServiceBundle",
+    "ContractServiceBundleAdjustment",
     "Invoice",
     "Project",
     "ProjectNote",
