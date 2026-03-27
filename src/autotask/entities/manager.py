@@ -39,6 +39,8 @@ class EntityManager:
         parent_id: int | None = None,
     ) -> AutotaskModel | dict[str, Any]:
         """Get a single entity by ID."""
+        if entity_id is None:
+            raise ValueError("entity_id is required for get()")
         path = self._entity_path(entity_type, parent_id)
         result = await self._client.get(f"{path}/{entity_id}")
         item = result.get("item", result)
@@ -91,8 +93,9 @@ class EntityManager:
         path = self._entity_path(cls, parent_id)
         result = await self._client.post(path, json=entity.for_create())
         item = result.get("item")
-        if item is None and "itemId" in result:
-            fetched = await self.get(cls, result["itemId"], parent_id=parent_id)
+        item_id = result.get("itemId")
+        if item is None and item_id is not None:
+            fetched = await self.get(cls, item_id, parent_id=parent_id)
             return fetched  # type: ignore[return-value]
         return cls.model_validate(item or result)
 
