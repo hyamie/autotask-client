@@ -82,6 +82,43 @@ class BillingItem(AutotaskModel):
     webServiceDate: datetime | None = None
 
 
+class Service(AutotaskModel):
+    _entity_type: ClassVar[str] = "Services"
+
+    name: str | None = None
+    description: str | None = None
+    unitCost: float | None = None
+    unitPrice: float | None = None
+    periodType: str | None = None
+    isActive: bool | None = None
+    createDate: datetime | None = None
+    creatorResourceID: int | None = None
+    updateDate: datetime | None = None
+    lastModifiedBy: int | None = None
+    allocationCodeID: int | None = None
+    markupRate: float | None = None
+    serviceLevelAgreementID: int | None = None
+    vendorAccountID: int | None = None
+    invoiceDescription: str | None = None
+
+
+class ServiceBundle(AutotaskModel):
+    _entity_type: ClassVar[str] = "ServiceBundles"
+
+    name: str | None = None
+    description: str | None = None
+    unitCost: float | None = None
+    unitPrice: float | None = None
+    periodType: str | None = None
+    isActive: bool | None = None
+    createDate: datetime | None = None
+    creatorResourceID: int | None = None
+    updateDate: datetime | None = None
+    lastModifiedBy: int | None = None
+    allocationCodeID: int | None = None
+    invoiceDescription: str | None = None
+
+
 class BillingCode(AutotaskModel):
     _entity_type: ClassVar[str] = "BillingCodes"
 

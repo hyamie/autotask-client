@@ -1,7 +1,7 @@
 """Autotask entity models."""
 
 from autotask.models.base import AutotaskModel, get_model_class
-from autotask.models.billing import BillingCode, BillingItem, Invoice
+from autotask.models.billing import BillingCode, BillingItem, Invoice, Service, ServiceBundle
 from autotask.models.company import Company
 from autotask.models.contract import (
     Contract,
@@ -31,6 +31,8 @@ __all__ = [
     "Project",
     "ProjectNote",
     "Resource",
+    "Service",
+    "ServiceBundle",
     "Task",
     "TaskNote",
     "Ticket",
