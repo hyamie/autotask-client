@@ -24,6 +24,7 @@ class AutotaskModel(BaseModel):
     _entity_type: ClassVar[str] = ""
     _parent_entity: ClassVar[str | None] = None
     _parent_id_field: ClassVar[str | None] = None
+    _child_path: ClassVar[str | None] = None
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)

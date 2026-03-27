@@ -83,6 +83,11 @@ class EntityManager:
         """Create an entity. Returns the created entity."""
         cls = type(entity)
         parent_id = parent_id or self._extract_parent_id(entity)
+        if cls._parent_entity and parent_id is None:
+            raise ValueError(
+                f"{cls.__name__} is a child of {cls._parent_entity}; "
+                f"set {cls._parent_id_field or 'parent_id'} or pass parent_id"
+            )
         path = self._entity_path(cls, parent_id)
         result = await self._client.post(path, json=entity.for_create())
         item = result.get("item")
@@ -100,6 +105,11 @@ class EntityManager:
         """Update an entity via PATCH (partial update, safe)."""
         cls = type(entity)
         parent_id = parent_id or self._extract_parent_id(entity)
+        if cls._parent_entity and parent_id is None:
+            raise ValueError(
+                f"{cls.__name__} is a child of {cls._parent_entity}; "
+                f"set {cls._parent_id_field or 'parent_id'} or pass parent_id"
+            )
         path = self._entity_path(cls, parent_id)
         result = await self._client.patch(path, json=entity.for_update())
         item = result.get("item", result)
@@ -166,18 +176,16 @@ class EntityManager:
         entity_type: type[AutotaskModel] | str,
         parent_id: int | None = None,
     ) -> str:
-        """Build the API path for an entity type."""
+        """Build the API path for an entity type.
+
+        For child entities with parent_id, builds the parent-child URL
+        (e.g., Contracts/123/Services). Falls back to the flat entity path
+        when parent_id is not provided (works for queries).
+        """
         if isinstance(entity_type, type) and issubclass(entity_type, AutotaskModel):
-            if entity_type._parent_entity:
-                if parent_id is None:
-                    raise ValueError(
-                        f"{entity_type.__name__} is a child entity of "
-                        f"{entity_type._parent_entity}; parent_id is required"
-                    )
-                return (
-                    f"{entity_type._parent_entity}/{parent_id}"
-                    f"/{entity_type._entity_type}"
-                )
+            if entity_type._parent_entity and parent_id is not None:
+                child = entity_type._child_path or entity_type._entity_type
+                return f"{entity_type._parent_entity}/{parent_id}/{child}"
             return entity_type._entity_type
         return str(entity_type)
 

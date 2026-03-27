@@ -47,6 +47,9 @@ class Contract(AutotaskModel):
 
 class ContractService(AutotaskModel):
     _entity_type: ClassVar[str] = "ContractServices"
+    _parent_entity: ClassVar[str | None] = "Contracts"
+    _parent_id_field: ClassVar[str | None] = "contractID"
+    _child_path: ClassVar[str | None] = "Services"
 
     contractID: int | None = None
     serviceID: int | None = None
@@ -59,6 +62,9 @@ class ContractService(AutotaskModel):
 
 class ContractServiceBundle(AutotaskModel):
     _entity_type: ClassVar[str] = "ContractServiceBundles"
+    _parent_entity: ClassVar[str | None] = "Contracts"
+    _parent_id_field: ClassVar[str | None] = "contractID"
+    _child_path: ClassVar[str | None] = "ServiceBundles"
 
     contractID: int | None = None
     serviceBundleID: int | None = None
@@ -71,6 +77,9 @@ class ContractServiceBundle(AutotaskModel):
 
 class ContractCharge(AutotaskModel):
     _entity_type: ClassVar[str] = "ContractCharges"
+    _parent_entity: ClassVar[str | None] = "Contracts"
+    _parent_id_field: ClassVar[str | None] = "contractID"
+    _child_path: ClassVar[str | None] = "Charges"
 
     contractID: int | None = None
     name: str | None = None
@@ -102,6 +111,7 @@ class ContractServiceAdjustment(AutotaskModel):
     _entity_type: ClassVar[str] = "ContractServiceAdjustments"
     _parent_entity: ClassVar[str | None] = "Contracts"
     _parent_id_field: ClassVar[str | None] = "contractID"
+    _child_path: ClassVar[str | None] = "ServiceAdjustments"
 
     contractID: int | None = None
     contractServiceID: int | None = None
@@ -116,6 +126,7 @@ class ContractServiceBundleAdjustment(AutotaskModel):
     _entity_type: ClassVar[str] = "ContractServiceBundleAdjustments"
     _parent_entity: ClassVar[str | None] = "Contracts"
     _parent_id_field: ClassVar[str | None] = "contractID"
+    _child_path: ClassVar[str | None] = "ServiceBundleAdjustments"
 
     contractID: int | None = None
     contractServiceBundleID: int | None = None
@@ -128,6 +139,9 @@ class ContractServiceBundleAdjustment(AutotaskModel):
 
 class ContractBillingRule(AutotaskModel):
     _entity_type: ClassVar[str] = "ContractBillingRules"
+    _parent_entity: ClassVar[str | None] = "Contracts"
+    _parent_id_field: ClassVar[str | None] = "contractID"
+    _child_path: ClassVar[str | None] = "BillingRules"
 
     contractID: int | None = None
     productID: int | None = None
