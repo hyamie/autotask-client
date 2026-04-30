@@ -89,7 +89,7 @@ class Service(AutotaskModel):
     description: str | None = None
     unitCost: float | None = None
     unitPrice: float | None = None
-    periodType: str | None = None
+    periodType: int | None = None
     isActive: bool | None = None
     createDate: datetime | None = None
     creatorResourceID: int | None = None
@@ -109,7 +109,7 @@ class ServiceBundle(AutotaskModel):
     description: str | None = None
     unitCost: float | None = None
     unitPrice: float | None = None
-    periodType: str | None = None
+    periodType: int | None = None
     isActive: bool | None = None
     createDate: datetime | None = None
     creatorResourceID: int | None = None
