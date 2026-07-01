@@ -1,0 +1,14 @@
+# Keeps GitHub Actions pins current — guards against runner Node-runtime
+# removals (e.g. Node 20 EOL 2026-09-16) breaking workflows silently.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore(ci)"
+    groups:
+      # One grouped PR per week instead of one per action — less noise.
+      actions:
+        patterns: ["*"]
