@@ -237,8 +237,14 @@ class AutotaskClient:
             raise AutotaskAuthError("Authentication failed (401)")
 
         if resp.status_code == 429:
+            # Two different limits answer 429: more than 3 requests in flight on one endpoint,
+            # or the 10k/hour account pool. Saying only the second sent agents into an hour's
+            # wait over a concurrency refusal; Autotask's own text tells them which it was.
+            detail = resp.text[:_MAX_ERROR_BODY_LEN].strip()
             raise AutotaskRateLimitError(
-                "Rate limit exceeded. 10k requests/hour shared across all integrations."
+                "Autotask refused the request with HTTP 429: too many concurrent requests on this"
+                " endpoint (3 at a time) or the 10k/hour account limit. Autotask said: "
+                + (detail or "(no detail)")
             )
 
         if resp.status_code >= 400:

@@ -13,7 +13,7 @@ class AutotaskAuthError(AutotaskError):
 
 
 class AutotaskRateLimitError(AutotaskError):
-    """Rate limit exceeded. 10k requests/hour shared across all integrations."""
+    """HTTP 429: more than 3 concurrent requests on an endpoint, or the 10k/hour account pool."""
 
 
 class AutotaskNotFoundError(AutotaskError):

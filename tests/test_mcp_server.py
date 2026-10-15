@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from autotask.mcp_server import _get_manager as _REAL_GET_MANAGER
 from autotask.models import Resource, Ticket
 
 
@@ -15,19 +16,9 @@ def mock_manager():
     return AsyncMock()
 
 
-@pytest.fixture
-def mock_client():
-    client = AsyncMock()
-    client.close = AsyncMock()
-    return client
-
-
 @pytest.fixture(autouse=True)
-def patch_get_manager(mock_client, mock_manager):
-    with patch(
-        "autotask.mcp_server._get_manager",
-        return_value=(mock_client, mock_manager),
-    ):
+def patch_get_manager(mock_manager):
+    with patch("autotask.mcp_server._get_manager", return_value=mock_manager):
         yield
 
 
@@ -201,3 +192,30 @@ class TestMCPServerRegistration:
         from autotask.mcp_server import mcp
 
         assert mcp.name == "autotask"
+
+
+class TestSharedClient:
+    """One client per process, so its 3-in-flight cap covers parallel tool calls."""
+
+    @pytest.mark.asyncio
+    async def test_parallel_calls_share_one_connected_client(self, monkeypatch):
+        import asyncio
+
+        from autotask import mcp_server
+
+        connects = []
+
+        class FakeClient:
+            def __init__(self, config):
+                pass
+
+            async def connect(self):
+                connects.append(1)
+                await asyncio.sleep(0)
+
+        monkeypatch.setattr(mcp_server, "_shared", None)
+        monkeypatch.setattr(mcp_server, "AutotaskClient", FakeClient)
+        monkeypatch.setattr(mcp_server.AutotaskConfig, "from_env", classmethod(lambda cls: object()))
+        managers = await asyncio.gather(*(_REAL_GET_MANAGER() for _ in range(6)))
+        assert len({id(m) for m in managers}) == 1
+        assert connects == [1]

@@ -9,6 +9,7 @@ Run: autotask-mcp
 
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 from typing import Any
@@ -60,14 +61,30 @@ def _validate_entity(entity: str) -> str | None:
     return None
 
 
-async def _get_manager() -> tuple[AutotaskClient, EntityManager]:
-    try:
-        config = AutotaskConfig.from_env()
-    except ValueError:
-        raise AutotaskError("Server misconfigured: missing required credentials")
-    client = AutotaskClient(config)
-    await client.connect()
-    return client, EntityManager(client)
+_shared: EntityManager | None = None
+_shared_lock = asyncio.Lock()
+
+
+async def _get_manager() -> EntityManager:
+    """The one client this process uses, connected on first use.
+
+    One client means one zone lookup, one connection pool and one concurrency cap: AutotaskClient
+    keeps at most 3 requests in flight, and Autotask answers a 4th concurrent request on an
+    endpoint with HTTP 429. A client per tool call let parallel calls from one agent turn past
+    that cap (six parallel Tickets queries, three refused), and repeated zone discovery on every
+    call.
+    """
+    global _shared
+    async with _shared_lock:
+        if _shared is None:
+            try:
+                config = AutotaskConfig.from_env()
+            except ValueError:
+                raise AutotaskError("Server misconfigured: missing required credentials")
+            client = AutotaskClient(config)
+            await client.connect()
+            _shared = EntityManager(client)
+    return _shared
 
 
 def _resolve_entity(entity: str) -> type[AutotaskModel] | str:
@@ -112,7 +129,7 @@ async def autotask_query(
     if err := _validate_entity(entity):
         return err
     limit = min(max(limit, 1), _MAX_QUERY_LIMIT)
-    client, em = await _get_manager()
+    em = await _get_manager()
     try:
         target = _resolve_entity(entity)
         q_filters = _parse_filters(filters)
@@ -120,8 +137,6 @@ async def autotask_query(
         return json.dumps(_serialize(results), indent=2, default=str)
     except Exception as e:
         return _error(str(e)) if isinstance(e, AutotaskError) else _error("Internal error")
-    finally:
-        await client.close()
 
 
 @mcp.tool
@@ -139,15 +154,13 @@ async def autotask_get(
     """
     if err := _validate_entity(entity):
         return err
-    client, em = await _get_manager()
+    em = await _get_manager()
     try:
         target = _resolve_entity(entity)
         result = await em.get(target, id, parent_id=parent_id)
         return json.dumps(_serialize(result), indent=2, default=str)
     except Exception as e:
         return _error(str(e)) if isinstance(e, AutotaskError) else _error("Internal error")
-    finally:
-        await client.close()
 
 
 @mcp.tool
@@ -168,7 +181,7 @@ async def autotask_create(
     model_class = get_model_class(entity)
     if model_class is None:
         return _error(f"No model registered for entity: {entity}. Use a known entity type.")
-    client, em = await _get_manager()
+    em = await _get_manager()
     try:
         instance = model_class.model_validate(fields)
         result = await em.create(instance, parent_id=parent_id)
@@ -177,8 +190,6 @@ async def autotask_create(
         return _error(f"Field validation failed: {e.errors(include_url=False)}")
     except Exception as e:
         return _error(str(e)) if isinstance(e, AutotaskError) else _error("Internal error")
-    finally:
-        await client.close()
 
 
 @mcp.tool
@@ -201,7 +212,7 @@ async def autotask_update(
     model_class = get_model_class(entity)
     if model_class is None:
         return _error(f"No model registered for entity: {entity}. Use a known entity type.")
-    client, em = await _get_manager()
+    em = await _get_manager()
     try:
         fields["id"] = id
         instance = model_class.model_validate(fields)
@@ -211,8 +222,6 @@ async def autotask_update(
         return _error(f"Field validation failed: {e.errors(include_url=False)}")
     except Exception as e:
         return _error(str(e)) if isinstance(e, AutotaskError) else _error("Internal error")
-    finally:
-        await client.close()
 
 
 @mcp.tool
@@ -230,15 +239,13 @@ async def autotask_delete(
     """
     if err := _validate_entity(entity):
         return err
-    client, em = await _get_manager()
+    em = await _get_manager()
     try:
         target = _resolve_entity(entity)
         await em.delete(target, id, parent_id=parent_id)
         return json.dumps({"status": "deleted", "entity": entity, "id": id})
     except Exception as e:
         return _error(str(e)) if isinstance(e, AutotaskError) else _error("Internal error")
-    finally:
-        await client.close()
 
 
 @mcp.tool
@@ -250,15 +257,13 @@ async def autotask_entity_info(entity: str) -> str:
     """
     if err := _validate_entity(entity):
         return err
-    client, em = await _get_manager()
+    em = await _get_manager()
     try:
         target = _resolve_entity(entity)
         result = await em.entity_info(target)
         return json.dumps(result, indent=2, default=str)
     except Exception as e:
         return _error(str(e)) if isinstance(e, AutotaskError) else _error("Internal error")
-    finally:
-        await client.close()
 
 
 @mcp.tool
@@ -270,15 +275,13 @@ async def autotask_field_info(entity: str) -> str:
     """
     if err := _validate_entity(entity):
         return err
-    client, em = await _get_manager()
+    em = await _get_manager()
     try:
         target = _resolve_entity(entity)
         result = await em.field_info(target)
         return json.dumps(result, indent=2, default=str)
     except Exception as e:
         return _error(str(e)) if isinstance(e, AutotaskError) else _error("Internal error")
-    finally:
-        await client.close()
 
 
 @mcp.tool
@@ -291,28 +294,24 @@ async def autotask_resolve_picklist(entity: str, field: str) -> str:
     """
     if err := _validate_entity(entity):
         return err
-    client, em = await _get_manager()
+    em = await _get_manager()
     try:
         target = _resolve_entity(entity)
         result = await em.resolve_picklist(target, field)
         return json.dumps(result, indent=2, default=str)
     except Exception as e:
         return _error(str(e)) if isinstance(e, AutotaskError) else _error("Internal error")
-    finally:
-        await client.close()
 
 
 @mcp.tool
 async def autotask_whoami() -> str:
     """Get the authenticated user's Resource record from Autotask."""
-    client, em = await _get_manager()
+    em = await _get_manager()
     try:
         result = await em.whoami()
         return json.dumps(_serialize(result), indent=2, default=str)
     except Exception as e:
         return _error(str(e)) if isinstance(e, AutotaskError) else _error("Internal error")
-    finally:
-        await client.close()
 
 
 def main() -> None:

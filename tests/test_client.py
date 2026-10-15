@@ -6,7 +6,7 @@ from pytest_httpx import HTTPXMock
 import autotask.client as client_module
 from autotask.client import AutotaskClient
 from autotask.config import AutotaskConfig
-from autotask.exceptions import AutotaskAPIError, AutotaskAuthError
+from autotask.exceptions import AutotaskAPIError, AutotaskAuthError, AutotaskRateLimitError
 
 
 @pytest.fixture(autouse=True)
@@ -138,6 +138,21 @@ async def test_generic_api_error(
         with pytest.raises(AutotaskAPIError) as exc_info:
             await client.get("Tickets")
         assert exc_info.value.status_code == 400
+
+
+async def test_rate_limit_error_carries_autotasks_own_reason(
+    httpx_mock: HTTPXMock, config_with_url: AutotaskConfig
+) -> None:
+    """A 429 names both limits and passes on Autotask's text, so a caller can tell a
+    concurrency refusal from an exhausted hourly pool."""
+    httpx_mock.add_response(status_code=429, text="Thread threshold of 3 exceeded")
+
+    async with AutotaskClient(config_with_url) as client:
+        with pytest.raises(AutotaskRateLimitError) as exc_info:
+            await client.get("Tickets")
+    message = str(exc_info.value)
+    assert "Thread threshold of 3 exceeded" in message
+    assert "3 at a time" in message and "10k/hour" in message
 
 
 # --- Pagination ---
