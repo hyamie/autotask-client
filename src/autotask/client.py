@@ -168,16 +168,22 @@ class AutotaskClient:
         filters: list[dict[str, Any]],
         max_records: int | None = None,
         max_pages: int = 200,
+        include_fields: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         """Query an entity with automatic pagination.
 
         Autotask returns max 500 records per query. This method automatically
         paginates by adding an 'id > last_id' filter until all records are fetched.
+        `include_fields` asks Autotask for only those fields (IncludeFields); `id` is always
+        added because pagination needs it. A ticket row is ~3 KB whole and ~100 bytes trimmed.
         """
         all_items: list[dict[str, Any]] = []
+        fields = sorted({*include_fields, "id"}) if include_fields else None
 
         for _ in range(max_pages):
-            body = {"filter": filters}
+            body: dict[str, Any] = {"filter": filters}
+            if fields:
+                body["IncludeFields"] = fields
             result = await self.post(f"{entity}/query", json=body)
             items = result.get("items", [])
 

@@ -85,6 +85,7 @@ class TestQuery:
             "Tickets",
             [{"field": "status", "op": "eq", "value": 8}],
             max_records=None,
+            include_fields=None,
         )
 
     @pytest.mark.asyncio
@@ -108,6 +109,7 @@ class TestQuery:
             "Projects/100/Notes",
             [{"field": "noteType", "op": "eq", "value": 5}],
             max_records=None,
+            include_fields=None,
         )
 
     @pytest.mark.asyncio
@@ -118,6 +120,7 @@ class TestQuery:
             "Tickets",
             [{"field": "status", "op": "eq", "value": 1}],
             max_records=10,
+            include_fields=None,
         )
 
     @pytest.mark.asyncio
@@ -125,7 +128,7 @@ class TestQuery:
         mock_client.query_all.return_value = []
         await manager.query("SomeEntity")
         mock_client.query_all.assert_called_once_with(
-            "SomeEntity", [], max_records=None
+            "SomeEntity", [], max_records=None, include_fields=None
         )
 
 
@@ -313,3 +316,32 @@ class TestWhoami:
 
         with pytest.raises(AutotaskNotFoundError, match="No resource found"):
             await manager.whoami()
+
+
+class TestIncludeFields:
+    """Asking Autotask for only some fields keeps a result small enough for an agent to read."""
+
+    @pytest.mark.asyncio
+    async def test_query_with_fields_returns_plain_rows(self, manager, mock_client):
+        mock_client.query_all.return_value = [{"id": 1, "status": 8}]
+        results = await manager.query(Ticket, Q(status=8), fields=["status"])
+        assert results == [{"id": 1, "status": 8}]  # not a Ticket full of defaults
+        assert mock_client.query_all.call_args.kwargs["include_fields"] == ["status"]
+
+    @pytest.mark.asyncio
+    async def test_get_with_fields_is_an_id_query(self, manager, mock_client):
+        mock_client.query_all.return_value = [{"id": 7, "endDate": "2033-11-16"}]
+        result = await manager.get("Contracts", 7, fields=["endDate"])
+        assert result == {"id": 7, "endDate": "2033-11-16"}
+        mock_client.get.assert_not_called()
+        mock_client.query_all.assert_called_once_with(
+            "Contracts", [{"field": "id", "op": "eq", "value": 7}], include_fields=["endDate"]
+        )
+
+    @pytest.mark.asyncio
+    async def test_get_with_fields_not_found(self, manager, mock_client):
+        from autotask.exceptions import AutotaskNotFoundError
+
+        mock_client.query_all.return_value = []
+        with pytest.raises(AutotaskNotFoundError):
+            await manager.get("Contracts", 7, fields=["endDate"])

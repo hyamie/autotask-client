@@ -34,7 +34,10 @@ Autotask PSA REST API tools. Important behavioral notes:
 - Supported operators: eq, noteq, gt, gte, lt, lte, beginsWith, endsWith, contains, in, notIn.
 - Updates use PATCH (partial) — only specified fields change; unspecified fields are untouched.
 - Max 500 records per query page; pagination is automatic.
-- Rate limit: 10k requests/hour shared across ALL integrations.
+- Rows are large (tickets carry full descriptions). Pass include_fields to autotask_query and
+  autotask_get with just the fields you need; the result stays small enough to read whole.
+- Rate limits: 10k requests/hour shared across ALL integrations, and at most 3 requests in flight
+  per endpoint (this server queues parallel calls). A 429 says which one it was.
 - Picklist fields store integer IDs — use autotask_resolve_picklist to get human-readable labels.
 - Invalid credentials return HTTP 500, not 401.
 - Empty results from queries may indicate permission issues, not missing data.
@@ -116,6 +119,7 @@ async def autotask_query(
     filters: dict[str, Any] | str = {},
     limit: int = 50,
     parent_id: int | None = None,
+    include_fields: list[str] | None = None,
 ) -> str:
     """Query any Autotask entity with filters.
 
@@ -125,6 +129,9 @@ async def autotask_query(
                  (e.g., {"status": 8, "id__gt": 100, "title__contains": "server"}).
         limit: Maximum records to return (default 50, max 500).
         parent_id: Parent entity ID for child entities (e.g., ticket ID for TicketNotes).
+        include_fields: Return only these fields, e.g. ["id", "ticketNumber", "status",
+                 "queueID"]. Whole rows are large (a ticket carries its full description);
+                 naming the fields you need keeps the result small enough to read whole.
     """
     if err := _validate_entity(entity):
         return err
@@ -133,8 +140,10 @@ async def autotask_query(
     try:
         target = _resolve_entity(entity)
         q_filters = _parse_filters(filters)
-        results = await em.query(target, *q_filters, parent_id=parent_id, max_records=limit)
-        return json.dumps(_serialize(results), indent=2, default=str)
+        results = await em.query(
+            target, *q_filters, parent_id=parent_id, max_records=limit, fields=include_fields
+        )
+        return json.dumps(_serialize(results), default=str)
     except Exception as e:
         return _error(str(e)) if isinstance(e, AutotaskError) else _error("Internal error")
 
@@ -144,6 +153,7 @@ async def autotask_get(
     entity: str,
     id: int,
     parent_id: int | None = None,
+    include_fields: list[str] | None = None,
 ) -> str:
     """Get a single Autotask entity by ID.
 
@@ -151,14 +161,15 @@ async def autotask_get(
         entity: Entity type name (e.g., Tickets, Companies).
         id: The entity ID.
         parent_id: Parent entity ID for child entities.
+        include_fields: Return only these fields, e.g. ["id", "endDate", "status"].
     """
     if err := _validate_entity(entity):
         return err
     em = await _get_manager()
     try:
         target = _resolve_entity(entity)
-        result = await em.get(target, id, parent_id=parent_id)
-        return json.dumps(_serialize(result), indent=2, default=str)
+        result = await em.get(target, id, parent_id=parent_id, fields=include_fields)
+        return json.dumps(_serialize(result), default=str)
     except Exception as e:
         return _error(str(e)) if isinstance(e, AutotaskError) else _error("Internal error")
 

@@ -1,5 +1,7 @@
 """Tests for core HTTP client."""
 
+import json
+
 import pytest
 from pytest_httpx import HTTPXMock
 
@@ -197,3 +199,16 @@ async def test_query_all_empty(
     async with AutotaskClient(config_with_url) as client:
         items = await client.query_all("Tickets", filters=[])
         assert items == []
+
+
+async def test_include_fields_always_asks_for_id(
+    httpx_mock: HTTPXMock, config_with_url: AutotaskConfig
+) -> None:
+    """Pagination reads the last row's id, so a field list without id still gets it."""
+    httpx_mock.add_response(json={"items": [{"id": 1, "status": 8}]})
+
+    async with AutotaskClient(config_with_url) as client:
+        rows = await client.query_all("Tickets", [], include_fields=["status"])
+    assert rows == [{"id": 1, "status": 8}]
+    sent = json.loads(httpx_mock.get_requests()[0].content)
+    assert sent["IncludeFields"] == ["id", "status"]

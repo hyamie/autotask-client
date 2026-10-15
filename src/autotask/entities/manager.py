@@ -37,11 +37,20 @@ class EntityManager:
         entity_id: int,
         *,
         parent_id: int | None = None,
+        fields: list[str] | None = None,
     ) -> AutotaskModel | dict[str, Any]:
-        """Get a single entity by ID."""
+        """Get a single entity by ID. With `fields`, only those fields come back, as a dict (the
+        single-item endpoint takes no field list, so that path is an id query)."""
         if entity_id is None:
             raise ValueError("entity_id is required for get()")
         path = self._entity_path(entity_type, parent_id)
+        if fields:
+            rows = await self._client.query_all(
+                path, [{"field": "id", "op": "eq", "value": entity_id}], include_fields=fields
+            )
+            if not rows:
+                raise AutotaskNotFoundError(f"{path} {entity_id} not found")
+            return rows[0]
         result = await self._client.get(f"{path}/{entity_id}")
         item = result.get("item", result)
         if item is None:
@@ -62,17 +71,19 @@ class EntityManager:
         *filters: Q,
         parent_id: int | None = None,
         max_records: int | None = None,
+        fields: list[str] | None = None,
     ) -> list[AutotaskModel] | list[dict[str, Any]]:
-        """Query entities with filters. Returns typed models or raw dicts."""
+        """Query entities with filters. Returns typed models or raw dicts; with `fields`, always
+        dicts holding just those fields (a model would fill the rest with defaults)."""
         path = self._entity_path(entity_type, parent_id)
         combined_filters: list[dict[str, Any]] = []
         for f in filters:
             combined_filters.extend(f.to_filter())
         items = await self._client.query_all(
-            path, combined_filters, max_records=max_records
+            path, combined_filters, max_records=max_records, include_fields=fields
         )
         model_class = self._resolve_model(entity_type)
-        if model_class:
+        if model_class and not fields:
             return [model_class.model_validate(item) for item in items]
         return items
 
