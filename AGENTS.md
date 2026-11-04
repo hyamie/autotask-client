@@ -36,3 +36,10 @@ leaving the tree messy:
   Codex edits.
 - Universal agent rules (no-mess git hygiene, work modes, secrets, commit format) live in the global
   `~/.codex/AGENTS.md` and apply here. This file holds only repo-specific facts.
+
+## Code Review Rules
+
+- The `CLAUDE.md` and `.claude/` restriction above binds Codex as an **author**, not the code under
+  review. A commit carrying a `Claude-Session:` trailer or `Co-Authored-By: Claude ...` was written by
+  Claude Code, which owns those files, so its edits to them are not an ownership violation. Do not
+  flag them. Flag a `CLAUDE.md` or `.claude/` edit only in a commit Codex itself authored.
